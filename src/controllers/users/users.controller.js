@@ -1,0 +1,208 @@
+import { User } from "./users.schema.js";
+import axios from "axios";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import moment from "moment";
+import { success, error } from "../../config/response.js";
+import key from "../../config/key.js";
+import { paginated_data, pagination } from "../../middleware/pagination.js";
+import { sendSMS, sms_code } from "../../utils/sms.js";
+import { Role } from "../../controllers/role/role.schema.js";
+import Logger from "../../utils/logger.js";
+
+export const email_signup = async (req, res) => {
+  try {
+    const data = req.body;
+    const user = await User.findOne({ email: data.email });
+    const user_role = await Role.findOne({ name: "user" });
+    if (user) return res.status(400).json(error("Email already exists", res.statusCode));
+    const code = sms_code();
+    const hash = bcrypt.hashSync(data.password, 12);
+    let newUser = new User({ 
+      full_name: data.full_name, 
+      email: data.email, 
+      password: hash, 
+      phone: data.phone, 
+      picture: data.picture, 
+      verification_code: code,
+      role: user_role && user_role._id,
+      otp_expires: moment(new Date()).add(5, "minutes")
+    });
+
+    newUser = await newUser.save();
+    const now = new Date();
+    const expires_at = new Date(now.setDate(now.getDate() + 30));
+    const { full_name, phone, email, _id, picture, role } = newUser;
+    const token = jwt.sign({ _id, email, full_name, role }, key.SECRET, { expiresIn: "30d" });
+    res.cookie("token", `Bearer ${token}`, { expires: new Date(new Date().getDate() + 64800000)});
+    return res.header("authorization", `Bearer ${token}`).json(success("Login success!", { 
+      token, expires_at, user: { full_name, email, _id, phone, picture, role
+    }}, res.statusCode));
+  } catch (err) {
+    Logger.error(JSON.stringify(err))
+    return res.status(500).json(error("We could not process your request. Try again after a while or contact our support for help", res.statusCode));
+  }
+}
+
+export const email_validation = async (req, res) => {
+  try {
+    const user = await User.findOne({ email: req.body.email });
+    if (user) return res.status(200).json(success("Success", user, res.statusCode));
+    if (!user) return res.status(404).json(error("User does not exist", res.statusCode));
+  } catch (err) {
+    return res.status(500).json(error("We could not process your request. Try again after a while or contact our support for help", res.statusCode));
+  }
+}
+
+export const resend_otp = async (req, res) => {
+  try {
+    const code = sms_code();
+    let user = await User.findOneAndUpdate({ phone: req.body.phone }, { 
+      $set: { verification_code: code, otp_expires: moment(new Date()).add(5, "minutes")}
+    }, { new: true });
+    if (!user) return res.status(400).json(error("Phone number not found!", res.statusCode));
+    
+    const sms = await sendSMS({
+      message: `Your Road Traffic Subscription verification code is: ${code}`,
+      to: user && user.phone,
+    });
+
+    user.verification_code = code;
+    await user.save();
+    if (sms && !sms.sid) return res.status(400).json(error(`We could not send OTP to ${user.phone}`, res.statusCode));
+    
+    return res.json(success("Success", { message: `We have sent a phone number verification code to your ${user.phone}`}, res.statusCode));
+  } catch (err) {
+    return res.status(500).json(error("We could not process your request. Try again after a while or contact our support for help", res.statusCode))
+  }
+}
+
+export const verify_phone_number = async (req, res) => {
+  try {
+    let user = await User.findOne({ verification_code: req.body.code, otp_expires: { $gte: new Date() }});
+    if (!user) return res.status(400).json(error("Invalid code or code has expired", res.statusCode));
+    user.verification_code = null;
+    user.phone_verified = true;
+    user = await user.save();
+    const { full_name, phone, phone_verified, email, _id, picture} = user;
+    const token = jwt.sign({ _id, email, phone_verified, full_name }, key.SECRET, { expiresIn: "30 days" });
+    res.cookie("token", `Bearer ${token}`, { expires: new Date(new Date().getDate() + 64800000)});
+    return res.header("authorization", `Bearer ${token}`).json(success("Login success!", { 
+      token, user: { full_name, email, _id, phone, picture
+    }}, res.statusCode));
+  } catch (err) {
+    return res.status(500).json(error("We could not process your request. Try again after a while or contact our support for help", res.statusCode));
+  }
+}
+
+export const email_login = async (req, res) => {
+  try {
+    let userExists = await User.findOne({ email: req.body.email });
+    if (!userExists) return res.status(404).json(error("User does not exist", res.statusCode));
+    const isMatched = bcrypt.compareSync(req.body.password, userExists.password);
+    if (!isMatched) return res.status(400).json(error("Invalid password", res.statusCode));
+    const now = new Date();
+    const expires_at = new Date(now.setDate(now.getDate() + 30));
+    const { full_name, email, _id, phone, phone_verified, role } = userExists;
+    const token = jwt.sign({ _id, email, full_name, role }, key.SECRET, { expiresIn: "30 days" });
+    res.cookie("token", `Bearer ${token}`, { expires: new Date(new Date().getDate() + 64800000)});
+    userExists.login_type = req.body.login_type;
+    await userExists.save();
+    return res.header("authorization", `Bearer ${token}`).json(success("Login success!", {
+      token, expires_at, user: { full_name, email, _id, phone_verified, phone, role
+    }}, res.statusCode));
+  } catch (err) {
+    return res.status(500).json(error("We could not process your request. Try again after a while or contact our support for help", res.statusCode));
+  }
+}
+
+export const userList = async (req, res) => {
+  try {
+    const { page, limit } = req.query;
+    const users = await User.find({}).select("-verification_code -otp_expires -reset_password_expires -reset_password_otp");
+    const result = paginated_data(users, +page, +limit);
+    return res.json(success("Success", result, res.statusCode));
+  } catch (err) {
+    return res.status(500).json(error("We could not process your request. Try again after a while or contact our support for help", res.statusCode));
+  }
+}
+
+export const userDetails = async (req, res) => {
+  try {
+    const user = await User.findById({ _id: req.query.id }).select("-verification_code -otp_expires -reset_password_expires -reset_password_otp");
+    if (!user) return res.status(404).json(error("User does not exist", res.statusCode));
+    return res.json(success("Success", user, res.statusCode));
+  } catch (err) {
+    console.log(err)
+    return res.status(500).json(error("We could not process your request. Try again after a while or contact our support for help", res.statusCode));
+  }
+}
+
+export const updateUser = async (req, res) => {
+  try {
+    let updatedUser = await User.findByIdAndUpdate({ _id: req.body.id }, req.body, { new: true });
+    if (!updatedUser) return res.status(404).json(error("User does not exist", res.statusCode));
+    delete updateUser.device_token;
+    return res.json(success("Success", updatedUser, res.statusCode));
+  } catch (err) {
+    return res.status(500).json(error("We could not process your request. Try again after a while or contact our support for help", res.statusCode));
+  }
+}
+
+export const deleteUser = async (req, res) => {
+  try {
+    let deletedUser = await User.findByIdAndDelete({ _id: req.query.id });
+    if (!deletedUser) return res.status(404).json(error("User does not exist", res.statusCode));
+    delete deletedUser.device_token;
+    return res.json(success("Success", deletedUser, res.statusCode));
+  } catch (err) {
+    return res.status(500).json(error("We could not process your request. Try again after a while or contact our support for help", res.statusCode));
+  }
+}
+
+export const search_customers = async (req, res) => {
+  try {
+    const { limit, offset } = pagination(req.query);
+    const { search_term } = req.query;
+    const search_result = await User.paginate({
+      $or: [
+        {
+          full_name: {
+            $regex: search_term,
+            $options: "i"
+          }
+        },
+        {
+          email: {
+            $regex: search_term,
+            $options: "i"
+          }
+        },
+        {
+          phone: {
+            $regex: search_term,
+            $options: "i"
+          }
+        }
+      ]
+    }, {
+      limit, offset
+    });
+    return res.json(success("Success", search_result, res.statusCode));
+  } catch (err) {
+    Logger.error(JSON.stringify(err));
+    return res.status(500).json(error("Something went wrong. Contact support for assistance", res.statusCode));
+  }
+}
+
+
+
+export const logout = async (req, res) => {
+  try {
+    return res.clearCookie("token").json(success("Successfully logged out", {}, res.statusCode));
+  } catch (err) {
+    return res.status(500).json(error("Something went wrong. Please contact our support for help", res.statusCode));
+  }
+}
+
+
