@@ -86,7 +86,7 @@ app.use((req, res, next) => {
 });
 
 app.use(cookieParser());
-app.get("/health", (req, res) => {
+app.get("/api/health", (req, res) => {
   res.send("Status Ok ---------------- !");
 });
 app.use(

@@ -22,7 +22,7 @@ securityDefinitions:
       Enter the token with the `Bearer: ` prefix, e.g. "Bearer abcde12345"
 
 paths:
-  /health:
+  /api/health:
     get:
       tags:
         - Health Check
