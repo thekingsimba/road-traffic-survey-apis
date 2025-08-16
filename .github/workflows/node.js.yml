@@ -26,4 +26,4 @@ jobs:
     - run: |
         touch .env
         echo "${{ secrets.DEV_ENV_FILE }}" > .env
-    - run: pm2 restart Road-Traffic-Survey-BE
+    - run: pm2 restart server
