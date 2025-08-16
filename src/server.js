@@ -13,6 +13,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import cookieParser from "cookie-parser";
 import events from "events";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
 
 events.EventEmitter.defaultMaxListeners = 1000;
 
@@ -25,6 +29,10 @@ const app = express();
 
 const httpServer = createServer(app);
 const port = process.env.PORT || 5000;
+
+// Set API host for Swagger documentation
+const apiHost = process.env.API_HOST || `localhost:${port}`;
+swaggerJSDoc.host = apiHost;
 
 const limiterOptions = {
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -42,8 +50,23 @@ function job_runner() {
 
 app.use(morganMiddleware);
 
+// Enhanced CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : ["http://localhost:3000", "http://localhost:3001", "http://16.170.162.77"];
+
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin;
+
+  // Allow requests from allowed origins or all origins in development
+  if (process.env.NODE_ENV === "production") {
+    if (allowedOrigins.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+    }
+  } else {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+  }
+
   res.setHeader(
     "Access-Control-Allow-Headers",
     "Content-Type, Authorization, Accept"
@@ -53,8 +76,15 @@ app.use((req, res, next) => {
     "GET, POST, PUT, DELETE, PATCH, OPTIONS"
   );
   res.setHeader("Cache-Control", "no-cache");
-  next();
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
 });
+
 app.use(cookieParser());
 app.get("/health", (req, res) => {
   res.send("Status Ok!!!!!!");

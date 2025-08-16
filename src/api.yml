@@ -9,7 +9,7 @@ info:
     name: MIT
     url: "https://opensource.org/licenses/MIT"
 
-host: localhost:5000
+host: ${API_HOST:-localhost:5000}
 basePath: /
 schemes: [http, https]
 
