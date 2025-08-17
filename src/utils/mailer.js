@@ -7,8 +7,11 @@ sgMail.setApiKey(key.SENDGRID_API_KEY);
 export const sendEmail = async (data) => {
   try {
     const response = await sgMail.send(data);
-    if (response) Logger.info(`Email sent: ${response[0].statusCode} ${response[0].headers.date}`);
+    if (response)
+      Logger.info(
+        `Email sent: ${response[0].statusCode} ${response[0].headers.date}`
+      );
   } catch (err) {
-    Logger.error(JSON.stringify(err))
+    Logger.error(JSON.stringify(err));
   }
-}
+};

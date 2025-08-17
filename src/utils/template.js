@@ -1,5 +1,3 @@
-
-
 export const dynamic_template_data = (data) => {
   const mail_data = {
     from: {
@@ -10,11 +8,11 @@ export const dynamic_template_data = (data) => {
         to: {
           email: data.email,
         },
-        dynamic_template_data: data.data
-      }
+        dynamic_template_data: data.data,
+      },
     ],
-    template_id: data.template_id
-  }
+    template_id: data.template_id,
+  };
 
   return mail_data;
-}
+};

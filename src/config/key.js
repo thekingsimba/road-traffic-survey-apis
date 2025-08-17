@@ -15,6 +15,6 @@ export default {
   DB_PARAMS: process.env.DB_PARAMS,
   // S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
   // S3_ACCESS_KEY: process.env.S3_ACCESS_KEY,
-  // S3_SECRET_KEY: process.env.S3_SECRET_KEY,
-  // SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
+  // S3_SECRET_KEY: process.env.S3.SECRET_KEY,
+  SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
 };
