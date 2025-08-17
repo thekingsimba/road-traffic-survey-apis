@@ -1278,6 +1278,572 @@ paths:
         500:
           description: Internal server error
 
+  # Survey Management Routes
+  /api/surveys/create:
+    post:
+      tags:
+        - Survey Management
+      summary: Create Survey
+      description: Create a new road traffic survey (Admin only)
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Survey name
+                example: "Highway A1 Morning Traffic Survey"
+              startPoint:
+                type: string
+                description: Starting point of the survey route
+                example: "City Center Junction"
+              endPoint:
+                type: string
+                description: Ending point of the survey route
+                example: "Industrial Zone Exit"
+              scheduledStartTime:
+                type: string
+                format: date-time
+                description: Scheduled start time of the survey
+                example: "2024-01-15T08:00:00.000Z"
+              scheduledEndTime:
+                type: string
+                format: date-time
+                description: Scheduled end time of the survey
+                example: "2024-01-15T18:00:00.000Z"
+              assignedAgent:
+                type: string
+                description: ID of the agent assigned to this survey
+                example: "507f1f77bcf86cd799439011"
+              countingPost:
+                type: string
+                enum: [start, end]
+                description: Counting post location (start or end point)
+                example: "start"
+      responses:
+        201:
+          description: Survey created successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "Survey created successfully"
+              data:
+                $ref: "#/definitions/Survey"
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden - Admin access required
+        500:
+          description: Internal server error
+
+  /api/surveys:
+    get:
+      tags:
+        - Survey Management
+      summary: Get Surveys List
+      description: Retrieve list of surveys (Admin sees all, Agent sees assigned ones)
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: page
+          type: integer
+          description: Page number for pagination
+          example: 1
+        - in: query
+          name: limit
+          type: integer
+          description: Number of items per page
+          example: 20
+        - in: query
+          name: status
+          type: string
+          enum: [active, inactive, archived]
+          description: Filter by survey status
+          example: "active"
+        - in: query
+          name: search
+          type: string
+          description: Search surveys by name
+          example: "Highway"
+      responses:
+        200:
+          description: Surveys list retrieved successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "Surveys retrieved successfully"
+              data:
+                type: object
+                properties:
+                  docs:
+                    type: array
+                    items:
+                      $ref: "#/definitions/Survey"
+                  totalDocs:
+                    type: integer
+                    example: 25
+                  page:
+                    type: integer
+                    example: 1
+                  limit:
+                    type: integer
+                    example: 20
+        401:
+          description: Unauthorized
+        500:
+          description: Internal server error
+
+  /api/surveys/{id}:
+    get:
+      tags:
+        - Survey Management
+      summary: Get Survey Details
+      description: Retrieve specific survey details by ID
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+          description: Survey ID
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        200:
+          description: Survey details retrieved successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "Survey retrieved successfully"
+              data:
+                $ref: "#/definitions/Survey"
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden - Access denied
+        404:
+          description: Survey not found
+        500:
+          description: Internal server error
+
+    put:
+      tags:
+        - Survey Management
+      summary: Update Survey
+      description: Update existing survey details (Admin only)
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+          description: Survey ID
+          example: "507f1f77bcf86cd799439011"
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              name:
+                type: string
+                description: Survey name
+                example: "Updated Highway A1 Morning Traffic Survey"
+              startPoint:
+                type: string
+                description: Starting point of the survey route
+                example: "Updated City Center Junction"
+              endPoint:
+                type: string
+                description: Ending point of the survey route
+                example: "Updated Industrial Zone Exit"
+              scheduledStartTime:
+                type: string
+                format: date-time
+                description: Scheduled start time of the survey
+                example: "2024-01-15T09:00:00.000Z"
+              scheduledEndTime:
+                type: string
+                format: date-time
+                description: Scheduled end time of the survey
+                example: "2024-01-15T19:00:00.000Z"
+              assignedAgent:
+                type: string
+                description: ID of the agent assigned to this survey
+                example: "507f1f77bcf86cd799439012"
+              countingPost:
+                type: string
+                enum: [start, end]
+                description: Counting post location (start or end point)
+                example: "end"
+      responses:
+        200:
+          description: Survey updated successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "Survey updated successfully"
+              data:
+                $ref: "#/definitions/Survey"
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden - Admin access required
+        404:
+          description: Survey not found
+        500:
+          description: Internal server error
+
+    delete:
+      tags:
+        - Survey Management
+      summary: Delete Survey
+      description: Delete a survey (Admin only)
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+          description: Survey ID
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        200:
+          description: Survey deleted successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "Survey deleted successfully"
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden - Admin access required
+        404:
+          description: Survey not found
+        500:
+          description: Internal server error
+
+  /api/surveys/{id}/start:
+    put:
+      tags:
+        - Survey Management
+      summary: Start Survey
+      description: Start an inactive survey (Admin or assigned Agent)
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+          description: Survey ID
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        200:
+          description: Survey started successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "Survey started successfully"
+              data:
+                $ref: "#/definitions/Survey"
+        400:
+          description: Bad request - Survey cannot be started
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden - Only admin or assigned agent can start this survey
+        404:
+          description: Survey not found
+        500:
+          description: Internal server error
+
+  /api/surveys/{id}/end:
+    put:
+      tags:
+        - Survey Management
+      summary: End Survey
+      description: End an active survey (Admin or assigned Agent)
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: id
+          type: string
+          required: true
+          description: Survey ID
+          example: "507f1f77bcf86cd799439011"
+      responses:
+        200:
+          description: Survey ended successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "Survey ended successfully"
+              data:
+                $ref: "#/definitions/Survey"
+        400:
+          description: Bad request - Survey cannot be ended
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden - Only admin or assigned agent can end this survey
+        404:
+          description: Survey not found
+        500:
+          description: Internal server error
+
+  /api/surveys/count-vehicle:
+    post:
+      tags:
+        - Survey Management
+      summary: Count Vehicle
+      description: Count a vehicle for an active survey (Agent only)
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              surveyId:
+                type: string
+                description: Survey ID to count vehicle for
+                example: "507f1f77bcf86cd799439011"
+              vehicleType:
+                type: string
+                enum: [motorcycle, car]
+                description: Type of vehicle to count
+                example: "car"
+      responses:
+        200:
+          description: Vehicle counted successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "car counted successfully"
+              data:
+                $ref: "#/definitions/Survey"
+        400:
+          description: Bad request - Invalid vehicle type or survey not active
+        401:
+          description: Unauthorized
+        403:
+          description: Forbidden - Access denied
+        404:
+          description: Survey not found
+        500:
+          description: Internal server error
+
+  /api/surveys/stats/overview:
+    get:
+      tags:
+        - Survey Management
+      summary: Get Survey Statistics
+      description: Retrieve overview statistics of all surveys
+      security:
+        - Bearer: []
+      produces:
+        - application/json
+      responses:
+        200:
+          description: Statistics retrieved successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "Statistics retrieved successfully"
+              data:
+                type: object
+                properties:
+                  totalSurveys:
+                    type: integer
+                    example: 25
+                  activeSurveys:
+                    type: integer
+                    example: 5
+                  inactiveSurveys:
+                    type: integer
+                    example: 15
+                  archivedSurveys:
+                    type: integer
+                    example: 5
+                  totalMotorcycles:
+                    type: integer
+                    example: 150
+                  totalCars:
+                    type: integer
+                    example: 450
+                  totalVehicles:
+                    type: integer
+                    example: 600
+        401:
+          description: Unauthorized
+        500:
+          description: Internal server error
+
+  # Agent Management Routes
+  /api/users/create-agent:
+    post:
+      tags:
+        - User Management
+      summary: Create Agent
+      description: Create a new agent user (Admin only)
+      security:
+        - Bearer: []
+      consumes:
+        - application/json
+      produces:
+        - application/json
+      parameters:
+        - in: body
+          name: body
+          required: true
+          schema:
+            type: object
+            properties:
+              full_name:
+                type: string
+                description: Agent's full name
+                example: "John Smith"
+              email:
+                type: string
+                format: email
+                description: Agent's email address
+                example: "john.smith@example.com"
+              phone:
+                type: string
+                description: Agent's phone number
+                example: "+1234567890"
+              countingPost:
+                type: string
+                enum: [start, end]
+                description: Agent's counting post location
+                example: "start"
+              password:
+                type: string
+                description: Initial password (optional, will generate default if not provided)
+                example: "Agent123!"
+      responses:
+        201:
+          description: Agent created successfully
+          schema:
+            type: object
+            properties:
+              success:
+                type: boolean
+                example: true
+              message:
+                type: string
+                example: "Agent created successfully"
+              data:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "507f1f77bcf86cd799439011"
+                  full_name:
+                    type: string
+                    example: "John Smith"
+                  email:
+                    type: string
+                    example: "john.smith@example.com"
+                  phone:
+                    type: string
+                    example: "+1234567890"
+                  role:
+                    type: string
+                    example: "507f1f77bcf86cd799439012"
+                  countingPost:
+                    type: string
+                    example: "start"
+        400:
+          description: Bad request
+        401:
+          description: Unauthorized
+        500:
+          description: Internal server error
+
 # Definitions for common data models
 definitions:
   User:
@@ -1363,6 +1929,87 @@ definitions:
         type: string
         format: date-time
         example: "2023-01-01T00:00:00.000Z"
+
+  Survey:
+    type: object
+    properties:
+      id:
+        type: string
+        example: "507f1f77bcf86cd799439011"
+      name:
+        type: string
+        example: "Highway A1 Morning Traffic Survey"
+      startPoint:
+        type: string
+        example: "City Center Junction"
+      endPoint:
+        type: string
+        example: "Industrial Zone Exit"
+      scheduledStartTime:
+        type: string
+        format: date-time
+        example: "2024-01-15T08:00:00.000Z"
+      scheduledEndTime:
+        type: string
+        format: date-time
+        example: "2024-01-15T18:00:00.000Z"
+      actualStartTime:
+        type: string
+        format: date-time
+        example: "2024-01-15T08:05:00.000Z"
+      actualEndTime:
+        type: string
+        format: date-time
+        example: "2024-01-15T18:00:00.000Z"
+      status:
+        type: string
+        enum: [active, inactive, archived]
+        example: "active"
+      motorcycleCount:
+        type: integer
+        example: 25
+      carCount:
+        type: integer
+        example: 150
+      assignedAgent:
+        type: object
+        properties:
+          id:
+            type: string
+            example: "507f1f77bcf86cd799439012"
+          full_name:
+            type: string
+            example: "John Smith"
+          email:
+            type: string
+            example: "john.smith@example.com"
+          phone:
+            type: string
+            example: "+1234567890"
+      countingPost:
+        type: string
+        enum: [start, end]
+        example: "start"
+      createdBy:
+        type: object
+        properties:
+          id:
+            type: string
+            example: "507f1f77bcf86cd799439013"
+          full_name:
+            type: string
+            example: "Admin User"
+          email:
+            type: string
+            example: "admin@example.com"
+      created_at:
+        type: string
+        format: date-time
+        example: "2024-01-10T10:00:00.000Z"
+      updated_at:
+        type: string
+        format: date-time
+        example: "2024-01-15T08:05:00.000Z"
 
   Error:
     type: object

@@ -63,6 +63,54 @@ export const email_signup = async (req, res) => {
   }
 };
 
+// Create agent (Admin only)
+export const createAgent = async (req, res) => {
+  try {
+    const { full_name, email, phone, countingPost, password } = req.body;
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json(error("Email already exists", res.statusCode));
+    }
+
+    // Get agent role
+    const agentRole = await Role.findOne({ name: "agent" });
+    if (!agentRole) {
+      return res.status(500).json(error("Agent role not found. Please contact administrator.", res.statusCode));
+    }
+
+    // Generate initial password if not provided
+    const initialPassword = password || "Agent123!";
+    const hash = bcrypt.hashSync(initialPassword, 12);
+
+    const newAgent = new User({
+      full_name,
+      email,
+      phone,
+      password: hash,
+      role: agentRole._id,
+      countingPost
+    });
+
+    await newAgent.save();
+
+    const agentData = {
+      _id: newAgent._id,
+      full_name: newAgent.full_name,
+      email: newAgent.email,
+      phone: newAgent.phone,
+      role: newAgent.role,
+      countingPost: newAgent.countingPost
+    };
+
+    return res.status(201).json(success("Agent created successfully", agentData, res.statusCode));
+  } catch (err) {
+    Logger.error(`AGENT CREATION ERROR: ${err}`);
+    return res.status(500).json(error("Failed to create agent. Please try again.", res.statusCode));
+  }
+};
+
 export const email_validation = async (req, res) => {
   try {
     const user = await User.findOne({ email: req.body.email });

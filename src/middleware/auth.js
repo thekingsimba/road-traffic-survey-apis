@@ -20,27 +20,34 @@ export const verifyUser = async (req, res, next) => {
 export const grantAccess = (resource) => {
   return async (req, res, next) => {
     try {
-      if (req.user) {
-        if ("role" in req.user) {
-          const role = await Role.findById(req.user["role"]).populate("permissions");
-          const permissions = role && role.permissions;
+      if (req.user && req.user.role) {
+        const role = await Role.findById(req.user.role).populate("permissions");
+        if (role && role.permissions) {
+          const permissions = role.permissions;
           for (let permission of permissions) {
             const perm = permission && permission.name;
-            const split_name = perm.split(" ")[0]
-            if (split_name.toLowerCase() === "allow" && perm.includes(resource)) { 
+            if (perm && perm.toLowerCase().includes(resource.toLowerCase())) {
               return next();
             }
           }
-          return res.status(403).json(error("You don't have permission for this request", res.statusCode));
-        } else {
-          return res.status(403).json(error("You don't have permission for this request", res.statusCode));
         }
+        return res
+          .status(403)
+          .json(
+            error("You don't have permission for this request", res.statusCode)
+          );
+      } else {
+        return res
+          .status(403)
+          .json(
+            error("You don't have permission for this request", res.statusCode)
+          );
       }
     } catch (err) {
-      next(error);
       Logger.error(JSON.stringify(err));
+      return res
+        .status(500)
+        .json(error("Internal server error", res.statusCode));
     }
-  }
+  };
 }
-
-// ibuprophine
