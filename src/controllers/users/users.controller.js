@@ -1,8 +1,6 @@
 import { User } from "./users.schema.js";
-import axios from "axios";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import moment from "moment";
 import { success, error } from "../../config/response.js";
 import key from "../../config/key.js";
 import { paginated_data, pagination } from "../../middleware/pagination.js";
@@ -26,7 +24,7 @@ export const email_signup = async (req, res) => {
       password: hash,
       phone: data.phone,
       picture: data.picture,
-      role: user_role && user_role._id,
+      role: user_role ? user_role._id : null, // Allow null role for initial setup
     });
 
     newUser = await newUser.save();
@@ -71,13 +69,22 @@ export const createAgent = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json(error("Email already exists", res.statusCode));
+      return res
+        .status(400)
+        .json(error("Email already exists", res.statusCode));
     }
 
     // Get agent role
     const agentRole = await Role.findOne({ name: "agent" });
     if (!agentRole) {
-      return res.status(500).json(error("Agent role not found. Please contact administrator.", res.statusCode));
+      return res
+        .status(500)
+        .json(
+          error(
+            "Agent role not found. Please contact administrator.",
+            res.statusCode
+          )
+        );
     }
 
     // Generate initial password if not provided
@@ -90,7 +97,7 @@ export const createAgent = async (req, res) => {
       phone,
       password: hash,
       role: agentRole._id,
-      countingPost
+      countingPost,
     });
 
     await newAgent.save();
@@ -101,13 +108,17 @@ export const createAgent = async (req, res) => {
       email: newAgent.email,
       phone: newAgent.phone,
       role: newAgent.role,
-      countingPost: newAgent.countingPost
+      countingPost: newAgent.countingPost,
     };
 
-    return res.status(201).json(success("Agent created successfully", agentData, res.statusCode));
+    return res
+      .status(201)
+      .json(success("Agent created successfully", agentData, res.statusCode));
   } catch (err) {
     Logger.error(`AGENT CREATION ERROR: ${err}`);
-    return res.status(500).json(error("Failed to create agent. Please try again.", res.statusCode));
+    return res
+      .status(500)
+      .json(error("Failed to create agent. Please try again.", res.statusCode));
   }
 };
 
@@ -306,10 +317,17 @@ export const search_customers = async (req, res) => {
 
 export const logout = async (req, res) => {
   try {
-    return res.clearCookie("token").json(success("Successfully logged out", {}, res.statusCode));
+    return res
+      .clearCookie("token")
+      .json(success("Successfully logged out", {}, res.statusCode));
   } catch (err) {
-    return res.status(500).json(error("Something went wrong. Please contact our support for help", res.statusCode));
+    return res
+      .status(500)
+      .json(
+        error(
+          "Something went wrong. Please contact our support for help",
+          res.statusCode
+        )
+      );
   }
-}
-
-
+};
