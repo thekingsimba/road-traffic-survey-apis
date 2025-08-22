@@ -16,10 +16,11 @@ export const email_create_validation = [
 
 export const email_login_validation = [
   body("email").isEmail().withMessage("Invalid email address"),
-  body("password").notEmpty().withMessage("Password is required"),
+  body("password").notEmpty().withMessage("Password is required!"),
   (req, res, next) => {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json(validation(errors.array()));
+    if (!errors.isEmpty())
+      return res.status(400).json(validation(errors.array()));
     next();
-  }
-]
+  },
+];
