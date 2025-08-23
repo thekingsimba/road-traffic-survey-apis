@@ -161,8 +161,7 @@ export const email_login = async (req, res) => {
     res.cookie("token", `Bearer ${token}`, {
       expires: new Date(new Date().getDate() + 64800000),
     });
-    userExists.login_type = req.body.login_type;
-    await userExists.save();
+
     return res.header("authorization", `Bearer ${token}`).json(
       success(
         "Login success!",

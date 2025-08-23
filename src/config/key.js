@@ -13,6 +13,7 @@ export default {
   DB_PASSWORD: process.env.DB_PASSWORD,
   DB_HOST: process.env.DB_HOST,
   DB_PARAMS: process.env.DB_PARAMS,
+  SECRET: process.env.SECRET,
   // S3_BUCKET_NAME: process.env.S3_BUCKET_NAME,
   // S3_ACCESS_KEY: process.env.S3_ACCESS_KEY,
   // S3_SECRET_KEY: process.env.S3.SECRET_KEY,
