@@ -91,7 +91,7 @@ app.use((req, res, next) => {
 
 app.use(cookieParser());
 app.get("/api/health", (req, res) => {
-  res.send("Status Ok ---------------- !");
+  res.send("Status Ok ----------------- !");
 });
 app.use(
   "/api_docs",
