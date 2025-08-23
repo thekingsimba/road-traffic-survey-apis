@@ -188,9 +188,9 @@ export const email_login = async (req, res) => {
 export const userList = async (req, res) => {
   try {
     const { page, limit } = req.query;
-    const users = await User.find({}).select(
-      "-reset_password_expires -reset_password_otp"
-    );
+    const users = await User.find({})
+      .select("-reset_password_expires -reset_password_otp")
+      .populate("role", "name");
     const result = paginated_data(users, +page, +limit);
     return res.json(success("Success", result, res.statusCode));
   } catch (err) {
