@@ -57,23 +57,35 @@ app.use(express.urlencoded({ extended: true }));
 // Enhanced CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(",")
-  : ["http://localhost:3000", "http://localhost:3001", "http://16.170.162.77"];
+  : [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:5173",
+      "http://16.170.162.77",
+    ];
 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  // Allow requests from allowed origins or all origins in development
+  // In production, only allow specific origins
   if (process.env.NODE_ENV === "production") {
     if (allowedOrigins.includes(origin)) {
       res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    } else {
+      // Block unauthorized origins in production
+      return res.status(403).json({ error: "Origin not allowed" });
     }
   } else {
+    // Development: allow all origins but handle credentials properly
     res.setHeader("Access-Control-Allow-Origin", "*");
+    // Note: When Allow-Origin is *, credentials cannot be true
+    res.setHeader("Access-Control-Allow-Credentials", "false");
   }
 
   res.setHeader(
     "Access-Control-Allow-Headers",
-    "Content-Type, Authorization, Accept"
+    "Content-Type, Authorization, Accept, ClientId"
   );
   res.setHeader(
     "Access-Control-Allow-Methods",
@@ -83,7 +95,7 @@ app.use((req, res, next) => {
 
   // Handle preflight requests
   if (req.method === "OPTIONS") {
-    res.sendStatus(200);
+    res.status(200).end();
   } else {
     next();
   }
