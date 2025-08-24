@@ -30,8 +30,8 @@ const app = express();
 const httpServer = createServer(app);
 const port = process.env.PORT || 5000;
 
-// Set API host for Swagger documentation
 const apiHost = process.env.API_HOST || `localhost:${port}`;
+
 swaggerJSDoc.host = apiHost;
 
 const limiterOptions = {
