@@ -30,8 +30,17 @@ jobs:
         touch .env
         echo "${{ secrets.DEV_ENV_FILE }}" > .env
 
-    - name: Restart backend server
-      run: pm2 restart server
+    # ✅ Start or Restart backend safely
+    - name: Start or Restart backend server
+      run: |
+        if pm2 describe server > /dev/null; then
+          echo "Restarting existing server..."
+          pm2 restart server
+        else
+          echo "Starting new server..."
+          pm2 start index.js --name server   # replace index.js with your actual entry file
+        fi
+        pm2 save
 
     # 🚀 Cleanup after build
     - name: Cleanup server
@@ -41,5 +50,4 @@ jobs:
         pkill -f "node" || true
         npm cache clean --force || true
         rm -rf ~/.npm/_cacache || true
-        rm -rf /tmp/* || true
         echo "✅ Backend cleanup done"
