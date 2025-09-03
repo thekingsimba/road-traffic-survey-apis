@@ -187,11 +187,22 @@ export const email_login = async (req, res) => {
 
 export const userList = async (req, res) => {
   try {
-    const { page, limit } = req.query;
-    const users = await User.find({})
+    const { page, limit, role } = req.query;
+
+    // Build query filter
+    let queryFilter = {};
+    if (role) {
+      // If role is specified, find users with that role
+      const roleDoc = await Role.findOne({ name: role });
+      if (roleDoc) {
+        queryFilter.role = roleDoc._id;
+      }
+    }
+
+    const users = await User.find(queryFilter)
       .select("-reset_password_expires -reset_password_otp")
       .populate("role", "name");
-    const result = paginated_data(users, +page, +limit);
+    const result = paginated_data(users, +(page || 1), +(limit || 20));
     return res.json(success("Success", result, res.statusCode));
   } catch (err) {
     return res

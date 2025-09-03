@@ -8,103 +8,101 @@ export const createSurveyValidator = [
     .trim()
     .isLength({ min: 3, max: 100 })
     .withMessage("Survey name must be between 3 and 100 characters"),
-  
+
   body("startPoint")
     .notEmpty()
     .isString()
     .trim()
     .isLength({ min: 3, max: 200 })
     .withMessage("Start point must be between 3 and 200 characters"),
-  
+
   body("endPoint")
     .notEmpty()
     .isString()
     .trim()
     .isLength({ min: 3, max: 200 })
     .withMessage("End point must be between 3 and 200 characters"),
-  
+
   body("scheduledStartTime")
     .notEmpty()
     .isISO8601()
     .withMessage("Scheduled start time must be a valid date"),
-  
+
   body("scheduledEndTime")
     .notEmpty()
     .isISO8601()
     .withMessage("Scheduled end time must be a valid date"),
-  
-  body("countingPost")
-    .notEmpty()
-    .isIn(['start', 'end'])
-    .withMessage("Counting post must be either 'start' or 'end'"),
-  
-  body("assignedAgent")
+
+  body("startPointAgent")
     .optional()
     .isMongoId()
-    .withMessage("Assigned agent must be a valid MongoDB ID"),
-  
+    .withMessage("Start point agent must be a valid MongoDB ID"),
+
+  body("endPointAgent")
+    .optional()
+    .isMongoId()
+    .withMessage("End point agent must be a valid MongoDB ID"),
+
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(422).json(validation(errors.array()));
     }
     next();
-  }
+  },
 ];
 
 export const updateSurveyValidator = [
-  param("id")
-    .isMongoId()
-    .withMessage("Invalid survey ID"),
-  
+  param("id").isMongoId().withMessage("Invalid survey ID"),
+
   body("name")
     .optional()
     .isString()
     .trim()
     .isLength({ min: 3, max: 100 })
     .withMessage("Survey name must be between 3 and 100 characters"),
-  
+
   body("startPoint")
     .optional()
     .isString()
     .trim()
     .isLength({ min: 3, max: 200 })
     .withMessage("Start point must be between 3 and 200 characters"),
-  
+
   body("endPoint")
     .optional()
     .isString()
     .trim()
     .isLength({ min: 3, max: 200 })
     .withMessage("End point must be between 3 and 200 characters"),
-  
+
   body("scheduledStartTime")
     .optional()
     .isISO8601()
     .withMessage("Scheduled start time must be a valid date"),
-  
+
   body("scheduledEndTime")
     .optional()
     .isISO8601()
     .withMessage("Scheduled end time must be a valid date"),
-  
-  body("countingPost")
-    .optional()
-    .isIn(['start', 'end'])
-    .withMessage("Counting post must be either 'start' or 'end'"),
-  
-  body("assignedAgent")
+
+  body("startPointAgent")
     .optional()
     .isMongoId()
-    .withMessage("Assigned agent must be a valid MongoDB ID"),
-  
+    .withMessage("Start point agent must be a valid MongoDB ID"),
+
+  body("endPointAgent")
+    .optional()
+    .isMongoId()
+    .withMessage("End point agent must be a valid MongoDB ID"),
+
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(422).json(validation(errors.array()));
     }
     next();
-  }
+  },
 ];
 
 export const surveyIdValidator = [

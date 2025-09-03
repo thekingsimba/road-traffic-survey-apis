@@ -13,23 +13,44 @@ export const createSurvey = async (req, res) => {
       endPoint,
       scheduledStartTime,
       scheduledEndTime,
-      assignedAgent,
-      countingPost
+      startPointAgent,
+      endPointAgent,
     } = req.body;
 
     // Validate time constraints
     if (new Date(scheduledStartTime) >= new Date(scheduledEndTime)) {
-      return res.status(400).json(error("End time must be after start time", res.statusCode));
+      return res
+        .status(400)
+        .json(error("End time must be after start time", res.statusCode));
     }
 
-    // Check if assigned agent exists and has agent role
-    if (assignedAgent) {
-      const agent = await User.findById(assignedAgent).populate('role');
+    // Check if start point agent exists and has agent role
+    if (startPointAgent) {
+      const agent = await User.findById(startPointAgent).populate("role");
       if (!agent) {
-        return res.status(404).json(error("Assigned agent not found", res.statusCode));
+        return res
+          .status(404)
+          .json(error("Start point agent not found", res.statusCode));
       }
-      if (agent.role && agent.role.name !== 'agent') {
-        return res.status(400).json(error("Assigned user must have agent role", res.statusCode));
+      if (agent.role && agent.role.name !== "agent") {
+        return res
+          .status(400)
+          .json(error("Start point user must have agent role", res.statusCode));
+      }
+    }
+
+    // Check if end point agent exists and has agent role
+    if (endPointAgent) {
+      const agent = await User.findById(endPointAgent).populate("role");
+      if (!agent) {
+        return res
+          .status(404)
+          .json(error("End point agent not found", res.statusCode));
+      }
+      if (agent.role && agent.role.name !== "agent") {
+        return res
+          .status(400)
+          .json(error("End point user must have agent role", res.statusCode));
       }
     }
 
@@ -39,15 +60,16 @@ export const createSurvey = async (req, res) => {
       endPoint,
       scheduledStartTime,
       scheduledEndTime,
-      assignedAgent,
-      countingPost,
-      createdBy: req.user._id
+      startPointAgent,
+      endPointAgent,
+      createdBy: req.user._id,
     });
 
     const savedSurvey = await survey.save();
     const populatedSurvey = await Survey.findById(savedSurvey._id)
-      .populate('assignedAgent', 'full_name email phone')
-      .populate('createdBy', 'full_name email');
+      .populate("startPointAgent", "full_name email phone")
+      .populate("endPointAgent", "full_name email")
+      .populate("createdBy", "full_name email");
 
     return res.status(201).json(success("Survey created successfully", populatedSurvey, res.statusCode));
   } catch (err) {
@@ -62,28 +84,34 @@ export const getAllSurveys = async (req, res) => {
     const { page, limit, status, search } = req.query;
     let query = {};
 
-    // If user is an agent, only show assigned surveys
-    if (req.user.role && req.user.role.name === 'agent') {
-      query.assignedAgent = req.user._id;
+    // If user is an agent, only show surveys where they are assigned to start or end point
+    if (req.user.role && req.user.role.name === "agent") {
+      query.$or = [
+        { startPointAgent: req.user._id },
+        { endPointAgent: req.user._id },
+      ];
     }
 
     // Filter by status if provided
-    if (status && ['active', 'inactive', 'archived'].includes(status)) {
+    if (status && ["active", "inactive", "archived"].includes(status)) {
       query.status = status;
     }
 
     // Search by name if provided
     if (search) {
-      query.name = { $regex: search, $options: 'i' };
+      query.name = { $regex: search, $options: "i" };
     }
 
     const surveys = await Survey.find(query)
-      .populate('assignedAgent', 'full_name email phone')
-      .populate('createdBy', 'full_name email')
+      .populate("startPointAgent", "full_name email phone")
+      .populate("endPointAgent", "full_name email")
+      .populate("createdBy", "full_name email")
       .sort({ createdAt: -1 });
 
     const result = paginated_data(surveys, +page || 1, +limit || 20);
-    return res.json(success("Surveys retrieved successfully", result, res.statusCode));
+    return res.json(
+      success("Surveys retrieved successfully", result, res.statusCode)
+    );
   } catch (err) {
     Logger.error(`SURVEY LIST ERROR: ${err}`);
     return res.status(500).json(error("Failed to retrieve surveys. Please try again.", res.statusCode));
@@ -95,17 +123,29 @@ export const getSurveyById = async (req, res) => {
   try {
     const { id } = req.params;
     const survey = await Survey.findById(id)
-      .populate('assignedAgent', 'full_name email phone')
-      .populate('createdBy', 'full_name email');
+      .populate("startPointAgent", "full_name email phone")
+      .populate("endPointAgent", "full_name email")
+      .populate("createdBy", "full_name email");
 
     if (!survey) {
       return res.status(404).json(error("Survey not found", res.statusCode));
     }
 
     // Check if agent can access this survey
-    if (req.user.role && req.user.role.name === 'agent' && 
-        survey.assignedAgent.toString() !== req.user._id.toString()) {
-      return res.status(403).json(error("Access denied. You can only view assigned surveys.", res.statusCode));
+    if (
+      req.user.role &&
+      req.user.role.name === "agent" &&
+      survey.startPointAgent?.toString() !== req.user._id.toString() &&
+      survey.endPointAgent?.toString() !== req.user._id.toString()
+    ) {
+      return res
+        .status(403)
+        .json(
+          error(
+            "Access denied. You can only view assigned surveys.",
+            res.statusCode
+          )
+        );
     }
 
     return res.json(success("Survey retrieved successfully", survey, res.statusCode));
@@ -129,34 +169,65 @@ export const updateSurvey = async (req, res) => {
 
     // Validate time constraints if updating times
     if (updateData.scheduledStartTime && updateData.scheduledEndTime) {
-      if (new Date(updateData.scheduledStartTime) >= new Date(updateData.scheduledEndTime)) {
-        return res.status(400).json(error("End time must be after start time", res.statusCode));
+      if (
+        new Date(updateData.scheduledStartTime) >=
+        new Date(updateData.scheduledEndTime)
+      ) {
+        return res
+          .status(400)
+          .json(error("End time must be after start time", res.statusCode));
       }
     }
 
-    // Check if assigned agent exists and has agent role
-    if (updateData.assignedAgent) {
-      const agent = await User.findById(updateData.assignedAgent).populate('role');
+    // Check if start point agent exists and has agent role
+    if (updateData.startPointAgent) {
+      const agent = await User.findById(updateData.startPointAgent).populate(
+        "role"
+      );
       if (!agent) {
-        return res.status(404).json(error("Assigned agent not found", res.statusCode));
+        return res
+          .status(404)
+          .json(error("Start point agent not found", res.statusCode));
       }
-      if (agent.role && agent.role.name !== 'agent') {
-        return res.status(400).json(error("Assigned user must have agent role", res.statusCode));
+      if (agent.role && agent.role.name !== "agent") {
+        return res
+          .status(400)
+          .json(error("Start point user must have agent role", res.statusCode));
       }
     }
 
-    const survey = await Survey.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true }
-    ).populate('assignedAgent', 'full_name email phone')
-     .populate('createdBy', 'full_name email');
+    // Check if end point agent exists and has agent role
+    if (updateData.endPointAgent) {
+      const agent = await User.findById(updateData.endPointAgent).populate(
+        "role"
+      );
+      if (!agent) {
+        return res
+          .status(404)
+          .json(error("End point agent not found", res.statusCode));
+      }
+      if (agent.role && agent.role.name !== "agent") {
+        return res
+          .status(400)
+          .json(error("End point user must have agent role", res.statusCode));
+      }
+    }
+
+    const survey = await Survey.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    })
+      .populate("startPointAgent", "full_name email phone")
+      .populate("endPointAgent", "full_name email")
+      .populate("createdBy", "full_name email");
 
     if (!survey) {
       return res.status(404).json(error("Survey not found", res.statusCode));
     }
 
-    return res.json(success("Survey updated successfully", survey, res.statusCode));
+    return res.json(
+      success("Survey updated successfully", survey, res.statusCode)
+    );
   } catch (err) {
     Logger.error(`SURVEY UPDATE ERROR: ${err}`);
     return res.status(500).json(error("Failed to update survey. Please try again.", res.statusCode));
@@ -192,10 +263,22 @@ export const startSurvey = async (req, res) => {
 
     // Check if user is admin or assigned agent
     const isAdmin = req.user.role && req.user.role.name === 'admin';
-    const isAssignedAgent = survey.assignedAgent && survey.assignedAgent.toString() === req.user._id.toString();
+    const isStartPointAgent =
+      survey.startPointAgent &&
+      survey.startPointAgent.toString() === req.user._id.toString();
+    const isEndPointAgent =
+      survey.endPointAgent &&
+      survey.endPointAgent.toString() === req.user._id.toString();
     
-    if (!isAdmin && !isAssignedAgent) {
-      return res.status(403).json(error("Access denied. Only admin or assigned agent can start this survey.", res.statusCode));
+    if (!isAdmin && !isStartPointAgent && !isEndPointAgent) {
+      return res
+        .status(403)
+        .json(
+          error(
+            "Access denied. Only admin or assigned agent can start this survey.",
+            res.statusCode
+          )
+        );
     }
 
     if (survey.status !== 'inactive') {
@@ -212,8 +295,9 @@ export const startSurvey = async (req, res) => {
     await survey.save();
 
     const updatedSurvey = await Survey.findById(id)
-      .populate('assignedAgent', 'full_name email phone')
-      .populate('createdBy', 'full_name email');
+      .populate("startPointAgent", "full_name email phone")
+      .populate("endPointAgent", "full_name email")
+      .populate("createdBy", "full_name email");
 
     return res.json(success("Survey started successfully", updatedSurvey, res.statusCode));
   } catch (err) {
@@ -234,10 +318,22 @@ export const endSurvey = async (req, res) => {
 
     // Check if user is admin or assigned agent
     const isAdmin = req.user.role && req.user.role.name === 'admin';
-    const isAssignedAgent = survey.assignedAgent && survey.assignedAgent.toString() === req.user._id.toString();
+    const isStartPointAgent =
+      survey.startPointAgent &&
+      survey.startPointAgent.toString() === req.user._id.toString();
+    const isEndPointAgent =
+      survey.endPointAgent &&
+      survey.endPointAgent.toString() === req.user._id.toString();
     
-    if (!isAdmin && !isAssignedAgent) {
-      return res.status(403).json(error("Access denied. Only admin or assigned agent can end this survey.", res.statusCode));
+    if (!isAdmin && !isStartPointAgent && !isEndPointAgent) {
+      return res
+        .status(403)
+        .json(
+          error(
+            "Access denied. Only admin or assigned agent can end this survey.",
+            res.statusCode
+          )
+        );
     }
 
     if (survey.status !== 'active') {
@@ -249,8 +345,9 @@ export const endSurvey = async (req, res) => {
     await survey.save();
 
     const updatedSurvey = await Survey.findById(id)
-      .populate('assignedAgent', 'full_name email phone')
-      .populate('createdBy', 'full_name email');
+      .populate("startPointAgent", "full_name email phone")
+      .populate("endPointAgent", "full_name email")
+      .populate("createdBy", "full_name email");
 
     return res.json(success("Survey ended successfully", updatedSurvey, res.statusCode));
   } catch (err) {
@@ -275,8 +372,18 @@ export const countVehicle = async (req, res) => {
     }
 
     // Check if agent is assigned to this survey
-    if (survey.assignedAgent.toString() !== req.user._id.toString()) {
-      return res.status(403).json(error("Access denied. You can only count vehicles for assigned surveys.", res.statusCode));
+    if (
+      survey.startPointAgent?.toString() !== req.user._id.toString() &&
+      survey.endPointAgent?.toString() !== req.user._id.toString()
+    ) {
+      return res
+        .status(403)
+        .json(
+          error(
+            "Access denied. You can only count vehicles for assigned surveys.",
+            res.statusCode
+          )
+        );
     }
 
     // Check if survey can be counted
@@ -294,8 +401,9 @@ export const countVehicle = async (req, res) => {
     await survey.save();
 
     const updatedSurvey = await Survey.findById(surveyId)
-      .populate('assignedAgent', 'full_name email phone')
-      .populate('createdBy', 'full_name email');
+      .populate("startPointAgent", "full_name email phone")
+      .populate("endPointAgent", "full_name email")
+      .populate("createdBy", "full_name email");
 
     return res.json(success(`${vehicleType} counted successfully`, updatedSurvey, res.statusCode));
   } catch (err) {

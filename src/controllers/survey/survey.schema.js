@@ -3,64 +3,63 @@ import mongoosePaginate from "mongoose-paginate-v2";
 
 const surveySchema = new Schema(
   {
-    name: { 
-      type: String, 
+    name: {
+      type: String,
       required: true,
-      trim: true
+      trim: true,
     },
-    startPoint: { 
-      type: String, 
+    startPoint: {
+      type: String,
       required: true,
-      trim: true
+      trim: true,
     },
-    endPoint: { 
-      type: String, 
+    endPoint: {
+      type: String,
       required: true,
-      trim: true
+      trim: true,
     },
-    scheduledStartTime: { 
-      type: Date, 
-      required: true
+    scheduledStartTime: {
+      type: Date,
+      required: true,
     },
-    scheduledEndTime: { 
-      type: Date, 
-      required: true
+    scheduledEndTime: {
+      type: Date,
+      required: true,
     },
-    actualStartTime: { 
-      type: Date
+    actualStartTime: {
+      type: Date,
     },
-    actualEndTime: { 
-      type: Date
+    actualEndTime: {
+      type: Date,
     },
-    status: { 
-      type: String, 
-      enum: ['active', 'inactive', 'archived'],
-      default: 'inactive'
+    status: {
+      type: String,
+      enum: ["active", "inactive", "archived"],
+      default: "inactive",
     },
-    motorcycleCount: { 
-      type: Number, 
+    motorcycleCount: {
+      type: Number,
       default: 0,
-      min: 0
+      min: 0,
     },
-    carCount: { 
-      type: Number, 
+    carCount: {
+      type: Number,
       default: 0,
-      min: 0
+      min: 0,
     },
-    assignedAgent: { 
-      type: Schema.Types.ObjectId, 
-      ref: "User"
-    },
-    countingPost: { 
-      type: String, 
-      required: true,
-      enum: ['start', 'end']
-    },
-    createdBy: { 
-      type: Schema.Types.ObjectId, 
+    startPointAgent: {
+      type: Schema.Types.ObjectId,
       ref: "User",
-      required: true
-    }
+    },
+    endPointAgent: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   {
     timestamps: true,
@@ -74,7 +73,8 @@ const surveySchema = new Schema(
 );
 
 // Indexes for better query performance
-surveySchema.index({ _id: 1, status: 1, assignedAgent: 1 });
+surveySchema.index({ _id: 1, status: 1, startPointAgent: 1 });
+surveySchema.index({ _id: 1, status: 1, endPointAgent: 1 });
 surveySchema.index({ scheduledEndTime: 1, status: 1 });
 surveySchema.index({ createdBy: 1 });
 
