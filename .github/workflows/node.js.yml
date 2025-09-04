@@ -49,7 +49,7 @@ jobs:
       if: always()
       run: |
         echo "🧹 Cleaning up backend runner..."
-        pkill -f "node" || true
-        npm cache clean --force || true
-        rm -rf ~/.npm/_cacache || true
+        sudo pkill -f "node" || true
+        sudo npm cache clean --force || true
+        sudo rm -rf ~/.npm/_cacache || true
         echo "✅ Backend cleanup done"
