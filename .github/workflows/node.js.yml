@@ -38,7 +38,8 @@ jobs:
           pm2 restart server
         else
           echo "Starting new server..."
-          pm2 start index.js --name server   # replace index.js with your actual entry file
+          ls
+          pm2 start server.js --name server
         fi
         pm2 save
 
