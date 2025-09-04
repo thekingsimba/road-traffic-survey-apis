@@ -38,10 +38,11 @@ jobs:
           pm2 restart server
         else
           echo "Starting new server..."
-          ls
+          cd src
           pm2 start server.js --name server
         fi
         pm2 save
+        cd ..
 
     # 🚀 Cleanup after build
     - name: Cleanup server
