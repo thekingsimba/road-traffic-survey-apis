@@ -392,10 +392,10 @@ export const endSurvey = async (req, res) => {
         );
     }
 
-    if (survey.status !== "active") {
+    if (survey.status === "archived") {
       return res
         .status(400)
-        .json(error("Survey can only be ended if it's active", res.statusCode));
+        .json(error("Survey is already archived", res.statusCode));
     }
 
     survey.status = "archived";
@@ -726,16 +726,12 @@ export const exportSurveyCsv = async (req, res) => {
     const survey = await Survey.findById(id)
       .populate("startPointAgent", "full_name email")
       .populate("endPointAgent", "full_name email")
-      .populate("createdBy", "full_name email");
+      .populate("createdBy", "full_name email")
+      .select("motorcycleCount carCount truckCount busCount pedestrianCount");
 
     if (!survey) {
       return res.status(404).json(error("Survey not found", res.statusCode));
     }
-
-    // Get counting data for the survey
-    const countingData = await Survey.findById(id).select(
-      "startPointCounts endPointCounts"
-    );
 
     // Create CSV content
     let csvContent = "Survey Export Data\n";
@@ -765,33 +761,32 @@ export const exportSurveyCsv = async (req, res) => {
 
     // Add counting data if available
     if (
-      countingData &&
-      (countingData.startPointCounts || countingData.endPointCounts)
+      survey &&
+      (survey.motorcycleCount > 0 ||
+        survey.carCount > 0 ||
+        survey.truckCount > 0 ||
+        survey.busCount > 0 ||
+        survey.pedestrianCount > 0)
     ) {
-      csvContent += "\nCounting Data\n";
-      csvContent += "Location,Vehicle Type,Count\n";
+      csvContent += "\nCounting Results\n";
+      csvContent += "Vehicle Type,Count\n";
+      csvContent += `"Motorcycle","${survey.motorcycleCount || 0}"\n`;
+      csvContent += `"Car","${survey.carCount || 0}"\n`;
+      csvContent += `"Truck","${survey.truckCount || 0}"\n`;
+      csvContent += `"Bus","${survey.busCount || 0}"\n`;
+      csvContent += `"Pedestrian","${survey.pedestrianCount || 0}"\n`;
 
-      if (countingData.startPointCounts) {
-        const counts = countingData.startPointCounts;
-        csvContent += `"Start Point","Motorcycle","${
-          counts.motorcycle || 0
-        }"\n`;
-        csvContent += `"Start Point","Car","${counts.car || 0}"\n`;
-        csvContent += `"Start Point","Truck","${counts.truck || 0}"\n`;
-        csvContent += `"Start Point","Bus","${counts.bus || 0}"\n`;
-        csvContent += `"Start Point","Pedestrian","${
-          counts.pedestrian || 0
-        }"\n`;
-      }
-
-      if (countingData.endPointCounts) {
-        const counts = countingData.endPointCounts;
-        csvContent += `"End Point","Motorcycle","${counts.motorcycle || 0}"\n`;
-        csvContent += `"End Point","Car","${counts.car || 0}"\n`;
-        csvContent += `"End Point","Truck","${counts.truck || 0}"\n`;
-        csvContent += `"End Point","Bus","${counts.bus || 0}"\n`;
-        csvContent += `"End Point","Pedestrian","${counts.pedestrian || 0}"\n`;
-      }
+      // Add total count
+      const totalCount =
+        (survey.motorcycleCount || 0) +
+        (survey.carCount || 0) +
+        (survey.truckCount || 0) +
+        (survey.busCount || 0) +
+        (survey.pedestrianCount || 0);
+      csvContent += `"TOTAL","${totalCount}"\n`;
+    } else {
+      csvContent += "\nCounting Results\n";
+      csvContent += "No counting data available for this survey\n";
     }
 
     // Set headers for CSV download
