@@ -9,7 +9,6 @@ const userSchema = new Schema(
     picture: { type: String },
     password: { type: String },
     role: { type: Schema.Types.ObjectId, ref: "Role" },
-    countingPost: { type: String, enum: ["start", "end"] },
     reset_password_otp: { type: Number },
     resetPasswordExpires: { type: Date },
   },
