@@ -2,10 +2,10 @@
     "name": "nodejs-restapi-render-deployment",
     "version": "1.0.0",
     "description": "",
-    "main": "server.js",
+    "main": "src/server.js",
     "type": "module",
     "scripts": {
-        "start": "node server.js",
+        "start": "node src/server.js",
         "dev": "nodemon --exec babel-node src/server.js",
         "setup": "node src/for-setup-and-testing/setup.js",
         "test": "echo \"Error: no test specified\" && exit 1"

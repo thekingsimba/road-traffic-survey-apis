@@ -34,7 +34,7 @@ const surveySchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["active", "inactive", "archived"],
+      enum: ["active", "inactive", "archived", "terminated"],
       default: "inactive",
     },
     motorcycleCount: {
@@ -43,6 +43,21 @@ const surveySchema = new Schema(
       min: 0,
     },
     carCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    truckCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    busCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    pedestrianCount: {
       type: Number,
       default: 0,
       min: 0,
@@ -59,6 +74,14 @@ const surveySchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
+    },
+    startPointSubmitted: {
+      type: Boolean,
+      default: false,
+    },
+    endPointSubmitted: {
+      type: Boolean,
+      default: false,
     },
   },
   {
@@ -79,24 +102,78 @@ surveySchema.index({ scheduledEndTime: 1, status: 1 });
 surveySchema.index({ createdBy: 1 });
 
 // Virtual for total vehicle count
-surveySchema.virtual('totalVehicleCount').get(function() {
-  return this.motorcycleCount + this.carCount;
+surveySchema.virtual("totalVehicleCount").get(function () {
+  return (
+    this.motorcycleCount +
+    this.carCount +
+    this.truckCount +
+    this.busCount +
+    this.pedestrianCount
+  );
 });
 
-// Method to check if survey is active
-surveySchema.methods.isActive = function() {
+// Method to check if survey is active (either manually active, within scheduled time window, or submitted)
+surveySchema.methods.isActive = function () {
   const now = new Date();
-  return this.status === 'active' && 
-         this.scheduledStartTime <= now && 
-         this.scheduledEndTime > now;
+  // Survey is active if:
+  // 1. Status is 'active' AND within scheduled time window, OR
+  // 2. Status is 'inactive' BUT current time is within scheduled time window (auto-activation), OR
+  // 3. Survey has been submitted (either start or end point)
+  return (
+    (this.status === "active" &&
+      this.scheduledStartTime <= now &&
+      this.scheduledEndTime > now) ||
+    (this.status === "inactive" &&
+      this.scheduledStartTime <= now &&
+      this.scheduledEndTime > now) ||
+    this.startPointSubmitted ||
+    this.endPointSubmitted
+  );
 };
 
 // Method to check if survey can be counted
-surveySchema.methods.canBeCounted = function() {
+surveySchema.methods.canBeCounted = function () {
   const now = new Date();
-  return this.status === 'active' && 
-         this.scheduledStartTime <= now && 
-         this.scheduledEndTime > now;
+  // Survey can be counted if:
+  // 1. Status is 'active' AND within scheduled time window, OR
+  // 2. Status is 'inactive' BUT current time is within scheduled time window (auto-activation), OR
+  // 3. Survey has been submitted (either start or end point)
+  return (
+    (this.status === "active" &&
+      this.scheduledStartTime <= now &&
+      this.scheduledEndTime > now) ||
+    (this.status === "inactive" &&
+      this.scheduledStartTime <= now &&
+      this.scheduledEndTime > now) ||
+    this.startPointSubmitted ||
+    this.endPointSubmitted
+  );
+};
+
+// Method to get effective status (considers time-based activation and submission status)
+surveySchema.methods.getEffectiveStatus = function () {
+  const now = new Date();
+  const isWithinTimeWindow =
+    this.scheduledStartTime <= now && this.scheduledEndTime > now;
+
+  if (this.status === "archived") {
+    return "archived";
+  }
+
+  if (this.status === "terminated") {
+    return "terminated";
+  }
+
+  // If survey has been submitted (either start or end point), show as active
+  if (this.startPointSubmitted || this.endPointSubmitted) {
+    return "active";
+  }
+
+  if (isWithinTimeWindow) {
+    return "active";
+  }
+
+  return "inactive";
 };
 
 surveySchema.plugin(mongoosePaginate);

@@ -1,6 +1,5 @@
 import { Router } from "express";
-import { verifyUser } from "../../middleware/auth.js";
-import { grantAccess } from "../../middleware/auth.js";
+import { verifyUser, grantAccess } from "../../middleware/auth.js";
 import {
   createSurvey,
   getAllSurveys,
@@ -10,22 +9,44 @@ import {
   startSurvey,
   endSurvey,
   countVehicle,
-  getSurveyStats
+  submitCountingData,
+  getCountingData,
+  getSurveyStats,
+  exportSurveyCsv,
 } from "./survey.controller.js";
 import {
   createSurveyValidator,
   updateSurveyValidator,
   surveyIdValidator,
   countVehicleValidator,
-  listSurveysValidator
+  submitCountingDataValidator,
+  listSurveysValidator,
 } from "./survey.validation.js";
 
 export const surveyRouter = Router();
 
 // Admin routes - require admin role
-surveyRouter.post("/create", verifyUser, grantAccess("survey"), createSurveyValidator, createSurvey);
-surveyRouter.put("/:id", verifyUser, grantAccess("survey"), updateSurveyValidator, updateSurvey);
-surveyRouter.delete("/:id", verifyUser, grantAccess("survey"), surveyIdValidator, deleteSurvey);
+surveyRouter.post(
+  "/create",
+  verifyUser,
+  grantAccess("survey"),
+  createSurveyValidator,
+  createSurvey
+);
+surveyRouter.put(
+  "/:id",
+  verifyUser,
+  grantAccess("survey"),
+  updateSurveyValidator,
+  updateSurvey
+);
+surveyRouter.delete(
+  "/:id",
+  verifyUser,
+  grantAccess("survey"),
+  surveyIdValidator,
+  deleteSurvey
+);
 
 // Routes accessible by both admin and agent - for survey lifecycle control
 surveyRouter.put("/:id/start", verifyUser, surveyIdValidator, startSurvey);
@@ -37,4 +58,26 @@ surveyRouter.get("/:id", verifyUser, surveyIdValidator, getSurveyById);
 surveyRouter.get("/stats/overview", verifyUser, getSurveyStats);
 
 // Agent route - for counting vehicles
-surveyRouter.post("/count-vehicle", verifyUser, countVehicleValidator, countVehicle);
+surveyRouter.post(
+  "/count-vehicle",
+  verifyUser,
+  countVehicleValidator,
+  countVehicle
+);
+
+// Counting data submission and retrieval routes
+surveyRouter.post(
+  "/counting/submit",
+  verifyUser,
+  submitCountingDataValidator,
+  submitCountingData
+);
+surveyRouter.get(
+  "/:id/counting",
+  verifyUser,
+  surveyIdValidator,
+  getCountingData
+);
+
+// Export survey data as CSV
+surveyRouter.get("/:id/export", verifyUser, surveyIdValidator, exportSurveyCsv);

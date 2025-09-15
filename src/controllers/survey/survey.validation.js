@@ -139,6 +139,53 @@ export const countVehicleValidator = [
   }
 ];
 
+export const submitCountingDataValidator = [
+  body("surveyId")
+    .notEmpty()
+    .isMongoId()
+    .withMessage("Survey ID is required and must be a valid MongoDB ID"),
+
+  body("counts").notEmpty().isObject().withMessage("Counts must be an object"),
+
+  body("counts.motorcycle")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Motorcycle count must be a non-negative integer"),
+
+  body("counts.car")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Car count must be a non-negative integer"),
+
+  body("counts.truck")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Truck count must be a non-negative integer"),
+
+  body("counts.bus")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Bus count must be a non-negative integer"),
+
+  body("counts.pedestrian")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("Pedestrian count must be a non-negative integer"),
+
+  body("countingPost")
+    .notEmpty()
+    .isIn(["start", "end"])
+    .withMessage("Counting post must be either 'start' or 'end'"),
+
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(422).json(validation(errors.array()));
+    }
+    next();
+  },
+];
+
 export const listSurveysValidator = [
   query("page")
     .optional()

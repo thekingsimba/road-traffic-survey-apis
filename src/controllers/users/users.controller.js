@@ -28,6 +28,8 @@ export const email_signup = async (req, res) => {
     });
 
     newUser = await newUser.save();
+    // Populate role information
+    await newUser.populate("role", "name");
     const now = new Date();
     const expires_at = new Date(now.setDate(now.getDate() + 30));
     const { full_name, phone, email, _id, picture, role } = newUser;
@@ -43,7 +45,14 @@ export const email_signup = async (req, res) => {
         {
           token,
           expires_at,
-          user: { full_name, email, _id, phone, picture, role },
+          user: {
+            full_name,
+            email,
+            _id,
+            phone,
+            picture,
+            role: role ? { id: role._id, name: role.name } : null,
+          },
         },
         res.statusCode
       )
@@ -143,7 +152,10 @@ export const email_validation = async (req, res) => {
 
 export const email_login = async (req, res) => {
   try {
-    let userExists = await User.findOne({ email: req.body.email });
+    let userExists = await User.findOne({ email: req.body.email }).populate(
+      "role",
+      "name"
+    );
     if (!userExists)
       return res.status(404).json(error("User does not exist", res.statusCode));
     const isMatched = bcrypt.compareSync(
@@ -168,7 +180,13 @@ export const email_login = async (req, res) => {
         {
           token,
           expires_at,
-          user: { full_name, email, _id, phone, role },
+          user: {
+            full_name,
+            email,
+            _id,
+            phone,
+            role: role ? { id: role._id, name: role.name } : null,
+          },
         },
         res.statusCode
       )
