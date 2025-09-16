@@ -14,23 +14,28 @@ jobs:
     runs-on: self-hosted
     strategy:
       matrix:
-        node-version: [22.x]
+        node-version: [20.x]   # Use stable LTS version (instead of 22.x)
+
     steps:
+    # Checkout code
     - uses: actions/checkout@v4
 
+    # Setup Node.js
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
 
+    # Install dependencies
     - run: npm ci
 
+    # Setup environment
     - run: |
         touch .env
         echo "${{ secrets.DEV_ENV_FILE }}" > .env
 
-    # ✅ Start or Restart backend safely
+    # ✅ Start or Restart backend safely with PM2
     - name: Start or Restart backend server
       run: |
         if pm2 describe server > /dev/null; then
@@ -38,16 +43,26 @@ jobs:
           pm2 restart server
         else
           echo "Starting new server..."
-          pm2 start index.js --name server   # replace index.js with your actual entry file
+          cd src
+          pm2 start server.js --name server
+          cd ..
         fi
         pm2 save
 
-    # 🚀 Cleanup after build
+    # 🚀 Cleanup after build (free disk space, keep backend running)
     - name: Cleanup server
       if: always()
       run: |
-        echo "🧹 Cleaning up backend runner..."
-        pkill -f "node" || true
+        echo "🧹 Cleaning up runner to free space..."
+
+        # Clear npm cache
         npm cache clean --force || true
         rm -rf ~/.npm/_cacache || true
-        echo "✅ Backend cleanup done"
+
+        # Clear PM2 logs (prevent disk bloat)
+        pm2 flush || true
+
+        # Vacuum system logs (keep last 7 days)
+        sudo journalctl --vacuum-time=7d || true
+
+        echo "✅ Cleanup done (backend still running)"
